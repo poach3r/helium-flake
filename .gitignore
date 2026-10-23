@@ -1,0 +1,5 @@
+result*
+EMAIL*.md
+docs
+.direnv
+__pycache__/

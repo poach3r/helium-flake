@@ -1,0 +1,24 @@
+# Friday evening: bump Helium (+ nixpkgs) onto `next` for Sulu's Saturday build.
+when:
+  - event: schedule
+    schedule:
+      - cron: "0 20 * * 5"
+        timezone: America/New_York
+  - event: manual
+
+engine: microvm
+image: nixos
+
+dependencies:
+  - git
+  - openssh
+  - python3
+  - curl
+
+environment:
+  BOT_HANDLE: "poacher-bot.tngl.sh"
+  BOT_EMAIL: "henrymatonis@proton.me"
+
+steps:
+  - name: bump next
+    command: scripts/ci/bump.sh

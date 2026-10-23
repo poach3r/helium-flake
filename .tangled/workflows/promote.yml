@@ -1,0 +1,27 @@
+# After Sulu's weekend build window: promote `next` to `main` once it's in
+# the cache; the Monday run opens an issue if it never arrived.
+when:
+  - event: schedule
+    schedule:
+      - cron: "0 18 * * 0"
+        timezone: America/New_York
+      - cron: "0 7 * * 1"
+        timezone: America/New_York
+  - event: manual
+
+engine: microvm
+image: nixos
+
+dependencies:
+  - git
+  - openssh
+  - python3
+  - curl
+
+environment:
+  BOT_HANDLE: "poacher-bot.tngl.sh"
+  BOT_EMAIL: "henrymatonis@proton.me"
+
+steps:
+  - name: promote next
+    command: scripts/ci/promote.sh
