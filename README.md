@@ -5,7 +5,7 @@ The [Helium](https://helium.computer) browser built from source with Nix.
 Helium releases are only picked up once nixos-unstable ships the Chromium
 version they are based on, so this can lag a little behind upstream.
 
-Prebuilt binaries are served from `https://cache.poacher.dev/helium`:
+Prebuilt binaries built weekly and served from `https://cache.poacher.dev/helium`:
 
 # Installation
 

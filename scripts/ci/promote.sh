@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Spindle job (Sun 18:00 + Mon 07:00): fast-forward main to next once Sulu's
 # build of next is in the cache. On the Monday run, a missing build opens an
-# issue instead. Also reminds about rotating Sulu's attic token.
+# issue instead. Releases whatever it finds cached (release.sh), and reminds
+# about rotating Sulu's attic token.
 set -euo pipefail
 
 CACHE_URL="https://cache.poacher.dev/helium"
@@ -11,7 +12,6 @@ TOKEN_PREFIX="Rotate the Sulu attic push token"
 
 issues() { python3 scripts/ci/tangled_issues.py "$@"; }
 
-# --- attic token expiry -------------------------------------------------
 expiry="$(tr -d '[:space:]' < ci/attic-token-expiry)"
 days_left="$(( ($(date -d "$expiry" +%s) - $(date +%s)) / 86400 ))"
 token_title="$TOKEN_PREFIX (expires $expiry)"
@@ -25,7 +25,6 @@ else
   issues close --title-prefix "$TOKEN_PREFIX"
 fi
 
-# --- promotion ----------------------------------------------------------
 git fetch -q origin '+refs/heads/*:refs/remotes/origin/*'
 main="$(git rev-parse origin/main)"
 next="$(git rev-parse -q --verify origin/next || true)"
@@ -53,11 +52,13 @@ if curl -sfo /dev/null "$narinfo"; then
   if [ "$next" != "$main" ]; then
     echo "$out is cached, promoting next@$next to main"
     . scripts/ci/git-setup.sh
-    git push -o skip-ci "$PUSH_URL" "$next:refs/heads/main"
+    # No skip-ci: the push to main triggers the GitHub mirror.
+    git push "$PUSH_URL" "$next:refs/heads/main"
   else
     echo "$out is cached, main is up to date"
   fi
   issues close --title-prefix "$BUILD_PREFIX"
+  scripts/ci/release.sh "$next" "$out"
   exit 0
 fi
 

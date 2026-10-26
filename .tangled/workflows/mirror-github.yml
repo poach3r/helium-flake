@@ -14,5 +14,11 @@ steps:
       if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then
         git fetch --unshallow origin
       fi
-      git branch -f main HEAD
-      git push --mirror "https://x-access-token:${GITHUB_TOKEN}@github.com/poach3r/helium-flake.git"
+      # Fetch every branch and tag so releases survive
+      git fetch -q origin '+refs/heads/*:refs/mirror/heads/*' '+refs/tags/*:refs/tags/*'
+      gh="https://x-access-token:${GITHUB_TOKEN}@github.com/poach3r/helium-flake.git"
+      git push --force --prune "$gh" 'refs/mirror/heads/*:refs/heads/*'
+      # A wildcard that matches nothing is an error
+      if [ -n "$(git tag -l)" ]; then
+        git push --force "$gh" 'refs/tags/*:refs/tags/*'
+      fi
