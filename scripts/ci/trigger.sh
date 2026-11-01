@@ -59,15 +59,16 @@ unset password
 token="$(curl -sfG "$pds/xrpc/com.atproto.server.getServiceAuth" \
   -H "Authorization: Bearer $jwt" \
   --data-urlencode "aud=did:web:$SPINDLE" \
-  --data-urlencode "lxm=sh.tangled.ci.triggerPipeline" | jq -r .token)" \
+  --data-urlencode "lxm=org.tangled.event.notifyEvent" | jq -r .token)" \
   || die "could not get a service auth token"
 
 echo "dispatching $workflow at $sha on $SPINDLE"
-jq -n --arg repo "$REPO_DID" --arg sha "$sha" --arg wf "$workflow" '{
+resp="$(jq -n --arg repo "$REPO_DID" --arg sha "$sha" --arg wf "$workflow" '{
     repo: $repo,
-    trigger: {"$type": "sh.tangled.ci.trigger#manual", sha: $sha, ref: "refs/heads/main"},
-    workflows: [$wf]
+    event: {"$type": "org.tangled.ci.trigger.manual", repo: $repo, commit: $sha,
+      ref: "refs/heads/main", workflows: [$wf]}
   }' \
-  | curl -sS -X POST "https://$SPINDLE/xrpc/sh.tangled.ci.triggerPipeline" \
-    -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d @- \
-  | jq .
+  | curl -sS --fail-with-body -X POST "https://$SPINDLE/xrpc/org.tangled.event.notifyEvent" \
+    -H "Authorization: Bearer $token" -H 'Content-Type: application/json' -d @-)" \
+  || die "spindle refused the trigger: $resp"
+jq . <<< "$resp"
