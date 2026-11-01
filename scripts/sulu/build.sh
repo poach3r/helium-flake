@@ -46,6 +46,16 @@ cleanup_store() {
   df -h "$SCRATCH" | tail -1
 }
 
+if [ "$mode" = "build" ] && ! end="$(deadline)"; then
+  # cron runs in the system timezone, which need not be $TZ_LOCAL: if the
+  # window opens within a few hours, wait for it rather than skip the week.
+  wait="$(( $(TZ=$TZ_LOCAL date -d 'today 22:00' +%s) - $(date +%s) ))"
+  [ "$wait" -le 14400 ] || die "refusing to build on a weekday during the day"
+  log "waiting $((wait / 60))m for the build window"
+  sleep "$wait"
+  end="$(deadline)" || die "build window did not open after waiting"
+fi
+
 rev="$(git ls-remote "$REPO_URL" "refs/heads/$BRANCH" | cut -f1)"
 [ -n "$rev" ] || die "branch $BRANCH not found at $REPO_URL"
 flake="git+$REPO_URL?ref=$BRANCH&rev=$rev"
@@ -61,7 +71,6 @@ if [ "$mode" = "patch-check" ]; then
   exit 0
 fi
 
-end="$(deadline)" || die "refusing to build on a weekday during the day"
 budget="$(( end - $(date +%s) - 1800 ))"
 [ "$budget" -gt 3600 ] || die "less than an hour left in the build window"
 
