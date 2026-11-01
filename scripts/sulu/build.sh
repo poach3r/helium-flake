@@ -47,8 +47,7 @@ cleanup_store() {
 }
 
 if [ "$mode" = "build" ] && ! end="$(deadline)"; then
-  # cron runs in the system timezone, which need not be $TZ_LOCAL: if the
-  # window opens within a few hours, wait for it rather than skip the week.
+  # cron may not run in $TZ_LOCAL; wait if the window opens soon.
   wait="$(( $(TZ=$TZ_LOCAL date -d 'today 22:00' +%s) - $(date +%s) ))"
   [ "$wait" -le 14400 ] || die "refusing to build on a weekday during the day"
   log "waiting $((wait / 60))m for the build window"

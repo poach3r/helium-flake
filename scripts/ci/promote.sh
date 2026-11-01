@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# Spindle job (Sun 18:00 + Mon 07:00): fast-forward main to next once Sulu's
-# build of next is in the cache. On the Monday run, a missing build opens an
-# issue instead. Releases whatever it finds cached (release.sh), and reminds
-# about rotating Sulu's attic token.
+# Spindle job: fast-forward main to next once Sulu's build of it is cached,
+# open an issue if it's still missing after the build window, release it, and
+# remind about rotating Sulu's attic token.
 set -euo pipefail
 
 CACHE_URL="https://cache.poacher.dev/helium"
@@ -63,7 +62,8 @@ if curl -sfo /dev/null "$narinfo"; then
 fi
 
 echo "$out is not cached yet"
-if [ "$(TZ=America/New_York date +%u)" -eq 1 ]; then
+# The build window ends Monday 05:30.
+if [ "$(TZ=America/New_York date +%u)" -eq 1 ] && [ "$((10#$(TZ=America/New_York date +%H%M)))" -ge 600 ]; then
   issues open --title "$BUILD_PREFIX: Helium $version" --body "Sulu's weekend build did not reach the cache.
 
 - next: \`$next\`

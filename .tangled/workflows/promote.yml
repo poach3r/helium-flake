@@ -1,11 +1,10 @@
-# After Sulu's weekend build window: promote `next` to `main` once it's in
-# the cache; the Monday run opens an issue if it never arrived.
+# Every two hours over the weekend: promote `next` to `main` once it's cached.
 when:
   - event: schedule
     schedule:
-      - cron: "0 18 * * 0"
+      - cron: "0 */2 * * 6,0"
         timezone: America/New_York
-      - cron: "0 7 * * 1"
+      - cron: "0 0-6/2 * * 1"
         timezone: America/New_York
   - event: manual
 
