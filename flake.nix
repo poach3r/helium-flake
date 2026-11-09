@@ -15,8 +15,9 @@
     system = "x86_64-linux";
     pkgs = nixpkgs.legacyPackages.${system};
   in {
+    # Uses the pinned nixpkgs rather than the overlaid package set
     overlays.default = final: _prev: {
-      helium = final.callPackage ./pkgs/helium {inherit nixpkgs;};
+      helium = self.packages.${final.stdenv.hostPlatform.system}.helium;
     };
 
     packages.${system} = {
