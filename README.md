@@ -37,7 +37,7 @@ Prebuilt binaries built weekly and served from `https://cache.poacher.dev/helium
   };
 
   environment.systemPackages = [
-    helium-flake.packages.${pkgs.system}.default
+    helium-flake.packages.${pkgs.stdenv.hostPlatform.system}.default
   ];
 }
 ```
@@ -47,7 +47,7 @@ Prebuilt binaries built weekly and served from `https://cache.poacher.dev/helium
 The package takes the same wrapper overrides as nixpkgs' `chromium`:
 
 ```nix
-helium-flake.packages.${pkgs.system}.default.override {
+helium-flake.packages.${pkgs.stdenv.hostPlatform.system}.default.override {
   inherit (pkgs) widevine-cdm;
   enableWideVine = true;
   commandLineArgs = "--ozone-platform-hint=auto";
