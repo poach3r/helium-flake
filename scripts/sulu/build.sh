@@ -46,6 +46,21 @@ cleanup_store() {
   df -h "$SCRATCH" | tail -1
 }
 
+# Push ci/failure-marker.nix's path for $rev so promote.sh opens an issue
+# right away instead of after the build window
+report_failure() {
+  log "$1"
+  local marker
+  if marker="$(nix eval --raw --file "$REPO_DIR/ci/failure-marker.nix" --apply "f: f {rev = \"$rev\";}")" \
+      && nix run --inputs-from "$flake" nixpkgs#attic-client -- push "$CACHE_NAME" "$marker" >> "$logfile" 2>&1; then
+    log "pushed failure marker $marker"
+  else
+    log "could not push the failure marker"
+  fi
+  cleanup_store
+  exit 1
+}
+
 if [ "$mode" = "build" ] && ! end="$(deadline)"; then
   # cron may not run in $TZ_LOCAL; wait if the window opens soon.
   wait="$(( $(TZ=$TZ_LOCAL date -d 'today 22:00' +%s) - $(date +%s) ))"
@@ -85,9 +100,7 @@ if ! timeout --kill-after=10m "$budget" \
     nix build --print-build-logs --print-out-paths \
       --out-link "$SCRATCH/gcroots/result" "$flake#helium^*" \
     > "$SCRATCH/tmp/outputs" 2> "$logfile"; then
-  log "build failed or ran out of time, see $logfile"
-  cleanup_store
-  exit 1
+  report_failure "build failed or ran out of time, see $logfile"
 fi
 mapfile -t outputs < "$SCRATCH/tmp/outputs"
 
@@ -99,9 +112,7 @@ if ! timeout 120 nix shell "$out" --command helium \
     --dump-dom 'data:text/html,<p id="smoke">helium-smoke-ok</p>' \
     2>> "$logfile" | grep -q helium-smoke-ok; then
   rm -rf "$profile"
-  log "smoke test failed, not pushing (see $logfile)"
-  cleanup_store
-  exit 1
+  report_failure "smoke test failed, not pushing (see $logfile)"
 fi
 rm -rf "$profile"
 

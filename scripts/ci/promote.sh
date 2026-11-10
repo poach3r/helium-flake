@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Spindle job: fast-forward main to next once Sulu's build of it is cached,
-# open an issue if it's still missing after the build window, release it, and
-# remind about rotating Sulu's attic token.
+# open an issue if Sulu reports a failure or it's still missing after the
+# build window
 set -euo pipefail
 
 CACHE_URL="https://cache.poacher.dev/helium"
@@ -62,9 +62,16 @@ if curl -sfo /dev/null "$narinfo"; then
 fi
 
 echo "$out is not cached yet"
-# The build window ends Monday 05:30.
-if [ "$(TZ=America/New_York date +%u)" -eq 1 ] && [ "$((10#$(TZ=America/New_York date +%H%M)))" -ge 600 ]; then
-  issues open --title "$BUILD_PREFIX: Helium $version" --body "Sulu's weekend build did not reach the cache.
+# Sulu pushes this when its build fails
+marker="$(nix eval --raw --file ci/failure-marker.nix --apply "f: f {rev = \"$next\";}")"
+if curl -sfo /dev/null "$CACHE_URL/$(basename "$marker" | cut -d- -f1).narinfo"; then
+  reason="Sulu's weekend build failed."
+elif [ "$(TZ=America/New_York date +%u)" -eq 1 ] && [ "$((10#$(TZ=America/New_York date +%H%M)))" -ge 600 ]; then
+  reason="Sulu's weekend build did not reach the cache."
+else
+  exit 0
+fi
+issues open --title "$BUILD_PREFIX: Helium $version" --body "$reason
 
 - next: \`$next\`
 - Helium: $version
@@ -72,4 +79,3 @@ if [ "$(TZ=America/New_York date +%u)" -eq 1 ] && [ "$((10#$(TZ=America/New_York
 - log on Sulu: \`$SULU_LOGS/$next.log\` (and \`$SULU_LOGS/cron.log\`)
 
 \`next\` stays unpromoted; Friday's bump will retry. This issue closes automatically once a build is promoted."
-fi
